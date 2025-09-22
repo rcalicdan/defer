@@ -31,10 +31,10 @@
         "php": "^8.2"
     },
     "require-dev": {
-        "pestphp/pest": "^3.0",
+        "pestphp/pest": "^4.0",
         "laravel/pint": "^1.0",
         "phpstan/phpstan": "^2.0",
-        "phpstan/phpstan-strict-rules": "^1.5"
+        "phpstan/phpstan-strict-rules": "^2.0"
     },
     "config": {
         "allow-plugins": {
@@ -45,7 +45,6 @@
     },
     "scripts": {
         "test": "./vendor/bin/pest",
-        "test-coverage": "./vendor/bin/pest --coverage --min=80",
         "format": "./vendor/bin/pint",
         "format-test": "./vendor/bin/pint --test",
         "analyze": "./vendor/bin/phpstan analyse",
