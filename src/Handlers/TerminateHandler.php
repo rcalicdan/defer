@@ -5,7 +5,7 @@ namespace Rcalicdan\Defer\Handlers;
 class TerminateHandler
 {
     /**
-     * @var array Terminate callbacks (executed after response)
+     * @var array<array{callback: callable, always: bool}> Terminate callbacks (executed after response)
      */
     protected array $terminateStack = [];
 
@@ -137,7 +137,7 @@ class TerminateHandler
      */
     public function executeCallbacks(): void
     {
-        if (empty($this->terminateStack)) {
+        if (count($this->terminateStack) === 0) {
             return;
         }
 
@@ -156,7 +156,7 @@ class TerminateHandler
                         $item['callback']();
                     }
                 } catch (\Throwable $e) {
-                    error_log('Terminate callback error: '.$e->getMessage());
+                    error_log('Terminate callback error: ' . $e->getMessage());
                 } finally {
                     unset($this->terminateStack[$index]);
                 }
@@ -176,15 +176,13 @@ class TerminateHandler
             return 200;
         }
 
-        // Try to get the response code
         $code = http_response_code();
 
-        // If no code has been set, default to 200
         if ($code === false) {
             return 200;
         }
 
-        return $code;
+        return (int) $code;
     }
 
     /**
@@ -205,6 +203,8 @@ class TerminateHandler
 
     /**
      * Get environment information
+     * 
+     * @return array{sapi: string, fastcgi: bool, fastcgi_finish_request: bool, output_buffering: bool, current_response_code: int}
      */
     public function getEnvironmentInfo(): array
     {

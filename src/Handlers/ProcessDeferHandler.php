@@ -79,6 +79,8 @@ class ProcessDeferHandler
 
     /**
      * Execute stack in LIFO order
+     * 
+     * @param array<callable> $stack
      */
     private function executeStack(array $stack): void
     {
@@ -88,7 +90,7 @@ class ProcessDeferHandler
                     $stack[$i]();
                 }
             } catch (\Throwable $e) {
-                error_log('Defer error: '.$e->getMessage());
+                error_log('Defer error: ' . $e->getMessage());
             } finally {
                 unset($stack[$i]);
             }
@@ -120,7 +122,7 @@ class ProcessDeferHandler
             try {
                 $this->executeAll();
             } catch (\Throwable $e) {
-                error_log('Defer shutdown error: '.$e->getMessage());
+                error_log('Defer shutdown error: ' . $e->getMessage());
             }
         });
 
@@ -134,10 +136,12 @@ class ProcessDeferHandler
 
     /**
      * Get signal handling capabilities info
+     * 
+     * @return array{platform: string, sapi: string, methods: array<string>, capabilities: array<string, mixed>}
      */
     public function getSignalHandlingInfo(): array
     {
-        if (self::$signalHandler) {
+        if (self::$signalHandler !== null) {
             return self::$signalHandler->getCapabilities();
         }
 
@@ -167,7 +171,8 @@ class ProcessDeferHandler
 
         echo "\nCapabilities:\n";
         foreach ($info['capabilities'] as $capability => $available) {
-            $status = $available ? '✅' : '❌';
+            $isAvailable = is_bool($available) ? $available : (bool) $available;
+            $status = $isAvailable ? '✅' : '❌';
             echo "  {$status} {$capability}\n";
         }
 

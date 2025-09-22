@@ -15,12 +15,12 @@ class SignalRegistryHandler
     private static bool $tickRegistered = false;
 
     /**
-     * @var array Signal handling capabilities
+     * @var array<string, string|bool> Signal handling capabilities
      */
     private array $capabilities = [];
 
     /**
-     * @var array Available methods
+     * @var array<string> Available methods
      */
     private array $methods = [];
 
@@ -61,14 +61,12 @@ class SignalRegistryHandler
      */
     private function registerWindowsHandler(): void
     {
-        sapi_windows_set_ctrl_handler(function (int $event) {
+        sapi_windows_set_ctrl_handler(function (int $event): void {
             // CTRL_C_EVENT = 0, CTRL_BREAK_EVENT = 1, CTRL_CLOSE_EVENT = 2
             if (in_array($event, [0, 1, 2], true)) {
                 call_user_func($this->callback);
                 exit(0);
             }
-
-            return true;
         });
     }
 
@@ -128,16 +126,16 @@ class SignalRegistryHandler
         }
 
         $initialParentPid = function_exists('posix_getppid') ? posix_getppid() : null;
+        $checkCount = 0;
 
-        register_tick_function(function () use ($initialParentPid) {
-            static $checkCount = 0;
+        register_tick_function(function () use ($initialParentPid, &$checkCount) {
             $checkCount++;
 
             if ($checkCount % 100 !== 0) {
                 return;
             }
 
-            if ($initialParentPid && function_exists('posix_getppid')) {
+            if ($initialParentPid !== null && function_exists('posix_getppid')) {
                 $currentParent = posix_getppid();
 
                 if ($currentParent === 1 && $initialParentPid !== 1) {
@@ -172,10 +170,10 @@ class SignalRegistryHandler
     {
         stream_set_blocking(STDIN, false);
 
-        register_tick_function(function () {
-            static $lastCheck = 0;
-            static $checkCount = 0;
+        $lastCheck = 0.0;
+        $checkCount = 0;
 
+        register_tick_function(function () use (&$lastCheck, &$checkCount) {
             $checkCount++;
 
             if ($checkCount % 50 !== 0) {
@@ -217,17 +215,19 @@ class SignalRegistryHandler
         });
 
         // Enhanced error handler
-        set_error_handler(function ($severity, $message, $file, $line) {
+        set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
             if ($severity === E_ERROR || $severity === E_CORE_ERROR || $severity === E_COMPILE_ERROR) {
                 call_user_func($this->callback);
             }
 
             // Get and restore original error handler
-            $original = set_error_handler(function () {});
+            $original = set_error_handler(function (): bool {
+                return false;
+            });
             restore_error_handler();
 
-            if ($original && is_callable($original)) {
-                return call_user_func($original, $severity, $message, $file, $line);
+            if ($original !== null) {
+                return (bool) call_user_func($original, $severity, $message, $file, $line);
             }
 
             return false;
@@ -256,11 +256,13 @@ class SignalRegistryHandler
             return;
         }
 
-        register_tick_function(function () {
-            static $checkCount = 0;
+        $checkCount = 0;
+
+        register_tick_function(function () use (&$checkCount) {
             $checkCount++;
 
-            if ($checkCount % 500 === 0 && connection_aborted()) {
+            $shouldCheck = ($checkCount % 500) === 0;
+            if ($shouldCheck && connection_aborted() === 1) {
                 call_user_func($this->callback);
                 exit(0);
             }
@@ -283,12 +285,13 @@ class SignalRegistryHandler
         }
 
         $memoryLimit = ini_get('memory_limit');
-        if ($memoryLimit === '-1') {
+        if ($memoryLimit === '-1' || $memoryLimit === false) {
             return;
         }
 
-        register_tick_function(function () use ($memoryLimit) {
-            static $checkCount = 0;
+        $checkCount = 0;
+
+        register_tick_function(function () use ($memoryLimit, &$checkCount) {
             $checkCount++;
 
             if ($checkCount % 1000 !== 0) {
@@ -378,13 +381,16 @@ class SignalRegistryHandler
     /**
      * Get signal handling capabilities
      *
-     * @return array Capabilities information
+     * @return array{platform: string, sapi: string, methods: array<string>, capabilities: array<string, string|bool>}
      */
     public function getCapabilities(): array
     {
+        $platformValue = $this->capabilities['platform'] ?? '';
+        $sapiValue = $this->capabilities['sapi'] ?? '';
+
         return [
-            'platform' => $this->capabilities['platform'],
-            'sapi' => $this->capabilities['sapi'],
+            'platform' => is_string($platformValue) ? $platformValue : '',
+            'sapi' => is_string($sapiValue) ? $sapiValue : '',
             'methods' => $this->methods,
             'capabilities' => $this->capabilities,
         ];
@@ -398,6 +404,7 @@ class SignalRegistryHandler
      */
     public function hasCapability(string $capability): bool
     {
-        return $this->capabilities[$capability] ?? false;
+        $value = $this->capabilities[$capability] ?? false;
+        return is_bool($value) ? $value : false;
     }
 }
