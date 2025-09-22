@@ -1,0 +1,13 @@
+{
+    "name": "rcalicdan/defer",
+    "description": "Framework agnostic Defered Execution Library for PHP",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Rcalicdan\\Defer\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "require": {}
+}
