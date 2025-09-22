@@ -23,7 +23,7 @@ class Defer
     /**
      * Global-scoped defer - executes at script shutdown
      *
-     * @param callable $callback The callback to defer
+     * @param  callable  $callback  The callback to defer
      */
     public static function global(callable $callback): void
     {
@@ -37,8 +37,8 @@ class Defer
     /**
      * Terminate-scoped defer - executes after response is sent
      *
-     * @param callable $callback The callback to execute
-     * @param bool $always Whether to execute even on 4xx/5xx status codes
+     * @param  callable  $callback  The callback to execute
+     * @param  bool  $always  Whether to execute even on 4xx/5xx status codes
      */
     public static function terminate(callable $callback, bool $always = false): void
     {

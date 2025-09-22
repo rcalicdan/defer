@@ -27,7 +27,7 @@ class ProcessDeferHandler
     public function __construct()
     {
         $this->registerShutdownHandlers();
-        $this->terminateHandler = new TerminateHandler();
+        $this->terminateHandler = new TerminateHandler;
     }
 
     /**
@@ -49,8 +49,8 @@ class ProcessDeferHandler
     /**
      * Add a terminate callback (executes after response is sent)
      *
-     * @param callable $callback The callback to execute
-     * @param bool $always Whether to execute even on 4xx/5xx status codes
+     * @param  callable  $callback  The callback to execute
+     * @param  bool  $always  Whether to execute even on 4xx/5xx status codes
      */
     public function terminate(callable $callback, bool $always = false): void
     {
@@ -88,7 +88,7 @@ class ProcessDeferHandler
                     $stack[$i]();
                 }
             } catch (\Throwable $e) {
-                error_log('Defer error: ' . $e->getMessage());
+                error_log('Defer error: '.$e->getMessage());
             } finally {
                 unset($stack[$i]);
             }
@@ -120,7 +120,7 @@ class ProcessDeferHandler
             try {
                 $this->executeAll();
             } catch (\Throwable $e) {
-                error_log('Defer shutdown error: ' . $e->getMessage());
+                error_log('Defer shutdown error: '.$e->getMessage());
             }
         });
 

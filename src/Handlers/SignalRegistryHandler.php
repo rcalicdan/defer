@@ -37,16 +37,19 @@ class SignalRegistryHandler
     {
         if (PHP_OS_FAMILY === 'Windows' && function_exists('sapi_windows_set_ctrl_handler')) {
             $this->registerWindowsHandler();
+
             return;
         }
 
         if (function_exists('pcntl_signal')) {
             $this->registerPcntlHandler();
+
             return;
         }
 
         if (PHP_OS_FAMILY !== 'Windows') {
             $this->registerUnixFallbackHandler();
+
             return;
         }
 
@@ -187,7 +190,7 @@ class SignalRegistryHandler
 
             $lastCheck = $now;
 
-            if (!is_resource(STDIN)) {
+            if (! is_resource(STDIN)) {
                 call_user_func($this->callback);
                 exit(0);
             }
@@ -209,6 +212,7 @@ class SignalRegistryHandler
         set_exception_handler(function (\Throwable $exception) {
             call_user_func($this->callback);
             restore_exception_handler();
+
             throw $exception;
         });
 
@@ -248,7 +252,7 @@ class SignalRegistryHandler
      */
     private function registerConnectionAbortHandler(): void
     {
-        if (PHP_SAPI === 'cli' || !function_exists('connection_aborted')) {
+        if (PHP_SAPI === 'cli' || ! function_exists('connection_aborted')) {
             return;
         }
 
@@ -274,7 +278,7 @@ class SignalRegistryHandler
      */
     private function registerMemoryLimitHandler(): void
     {
-        if (!function_exists('memory_get_usage') || !function_exists('ini_get')) {
+        if (! function_exists('memory_get_usage') || ! function_exists('ini_get')) {
             return;
         }
 
@@ -303,7 +307,7 @@ class SignalRegistryHandler
     /**
      * Parse memory limit string to bytes
      *
-     * @param string $limit Memory limit string (e.g., '128M', '1G')
+     * @param  string  $limit  Memory limit string (e.g., '128M', '1G')
      * @return int Memory limit in bytes
      */
     private function parseMemoryLimit(string $limit): int
@@ -389,7 +393,7 @@ class SignalRegistryHandler
     /**
      * Test if a specific capability is available
      *
-     * @param string $capability Capability name to test
+     * @param  string  $capability  Capability name to test
      * @return bool True if capability is available
      */
     public function hasCapability(string $capability): bool

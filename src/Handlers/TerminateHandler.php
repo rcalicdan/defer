@@ -17,8 +17,8 @@ class TerminateHandler
     /**
      * Add a terminate callback
      *
-     * @param callable $callback The callback to add
-     * @param bool $always Whether to execute even on 4xx/5xx status codes
+     * @param  callable  $callback  The callback to add
+     * @param  bool  $always  Whether to execute even on 4xx/5xx status codes
      */
     public function addCallback(callable $callback, bool $always = false): void
     {
@@ -30,7 +30,7 @@ class TerminateHandler
             'callback' => $callback,
             'always' => $always,
         ];
-        
+
         $this->registerHandlers();
     }
 
@@ -148,7 +148,7 @@ class TerminateHandler
             foreach ($this->terminateStack as $index => $item) {
                 try {
                     // Skip execution if it's an error status and callback is not marked as 'always'
-                    if ($shouldSkipOnError && !$item['always']) {
+                    if ($shouldSkipOnError && ! $item['always']) {
                         continue;
                     }
 
@@ -156,7 +156,7 @@ class TerminateHandler
                         $item['callback']();
                     }
                 } catch (\Throwable $e) {
-                    error_log('Terminate callback error: ' . $e->getMessage());
+                    error_log('Terminate callback error: '.$e->getMessage());
                 } finally {
                     unset($this->terminateStack[$index]);
                 }
@@ -178,7 +178,7 @@ class TerminateHandler
 
         // Try to get the response code
         $code = http_response_code();
-        
+
         // If no code has been set, default to 200
         if ($code === false) {
             return 200;
