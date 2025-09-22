@@ -1,9 +1,9 @@
 <?php
 
-namespace Library\Defer\Utilities;
+namespace Rcalicdan\Defer\Utilities;
 
-use Library\Defer\Handlers\FunctionScopeHandler;
-use Library\Defer\Handlers\ProcessDeferHandler;
+use Rcalicdan\Defer\Handlers\FunctionScopeHandler;
+use Rcalicdan\Defer\Handlers\ProcessDeferHandler;
 
 /**
  * Function-scoped defer instance with method chaining

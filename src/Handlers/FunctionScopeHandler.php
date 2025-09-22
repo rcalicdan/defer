@@ -1,6 +1,6 @@
 <?php
 
-namespace Library\Defer\Handlers;
+namespace Rcalicdan\Defer\Handlers;
 
 /**
  * Function-scoped defer handler that executes when the object is destroyed

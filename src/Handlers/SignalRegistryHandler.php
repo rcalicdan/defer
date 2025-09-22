@@ -1,6 +1,6 @@
 <?php
 
-namespace Library\Defer\Handlers;
+namespace Rcalicdan\Defer\Handlers;
 
 class SignalRegistryHandler
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Library\Defer;
+namespace Rcalicdan\Defer;
 
-use Library\Defer\Handlers\ProcessDeferHandler;
-use Library\Defer\Utilities\DeferInstance;
+use Rcalicdan\Defer\Handlers\ProcessDeferHandler;
+use Rcalicdan\Defer\Utilities\DeferInstance;
 
 /**
  * Static defer utility focused on task scheduling
