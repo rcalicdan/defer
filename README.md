@@ -166,12 +166,14 @@ while (true) {
 
 Terminate defers execute after the HTTP response is sent to the client in **FIFO (First In, First Out)** order, allowing for background processing without impacting response time.
 
+**Note:** Terminate defers work best in **FastCGI environments** (PHP-FPM, FastCGI) where `fastcgi_finish_request()` is available. This function properly separates response sending from background task execution. Other environments use fallback methods but may not guarantee true post-response execution.
+
 ### Basic Usage
 
 ```php
 use Rcalicdan\Defer\Defer;
 
-// In your controller/handler
+// In your controller/handler (works best with PHP-FPM/FastCGI)
 function handleRequest($request) {
     // Process request and prepare response
     $response = processRequest($request);
@@ -196,6 +198,32 @@ function handleRequest($request) {
 }
 ```
 
+### Environment Requirements
+
+For optimal terminate defer functionality:
+
+**✅ Recommended (True post-response execution):**
+- PHP-FPM (FastCGI Process Manager)
+- FastCGI with `fastcgi_finish_request()` available
+
+**⚠️ Limited (Fallback behavior):**
+- CLI (executes after main script)
+- Development server (flushes output buffers first)
+- Other SAPIs (uses output buffer flushing)
+
+### Checking FastCGI Availability
+
+```php
+// Check if your environment supports optimal terminate functionality
+$info = Defer::getHandler()->getHandler()->getEnvironmentInfo();
+
+if ($info['fastcgi'] && $info['fastcgi_finish_request']) {
+    echo "✅ Optimal terminate defer support available\n";
+} else {
+    echo "⚠️ Using fallback terminate handling\n";
+}
+```
+
 ### Error Handling
 
 By default, terminate defers skip execution on 4xx/5xx HTTP status codes. Use the `$always` parameter to force execution:
@@ -212,11 +240,11 @@ Defer::terminate(function() {
 
 ### Environment Support
 
-Terminate defers work across different PHP environments:
+Terminate defers work across different PHP environments with varying effectiveness:
 
-- **FastCGI/FPM**: Uses `fastcgi_finish_request()`
-- **CLI**: Executes after main script
-- **Development Server**: Flushes output buffers first
+- **FastCGI/FPM** ✅: Uses `fastcgi_finish_request()` for true post-response execution
+- **CLI**: Executes after main script completion
+- **Development Server**: Flushes output buffers before execution
 - **Other SAPIs**: Fallback with output buffer handling
 
 ## Advanced Usage
@@ -278,14 +306,14 @@ Defer::getHandler()->testSignalHandling();
 ### Environment Information
 
 ```php
-// For terminate defers
+// For terminate defers - check FastCGI capabilities
 $info = Defer::getHandler()->getHandler()->getEnvironmentInfo();
 print_r($info);
 /*
 Array (
     [sapi] => fpm-fcgi
-    [fastcgi] => 1
-    [fastcgi_finish_request] => 1
+    [fastcgi] => 1                    // FastCGI environment detected
+    [fastcgi_finish_request] => 1     // Optimal function available
     [output_buffering] => 0
     [current_response_code] => 200
 )
@@ -316,6 +344,7 @@ $defer = Defer::scope()
 - Function and Global defers execute in LIFO order (stack-like behavior)
 - Terminate defers execute in FIFO order (queue-like behavior)
 - Minimal overhead for registration and cleanup
+- **FastCGI environments provide the most efficient terminate defer execution**
 
 ## Real-World Examples
 
@@ -369,9 +398,10 @@ function processUploadedImage($uploadedFile) {
 }
 ```
 
-### Background Processing with Terminate
+### Background Processing with Terminate (FastCGI Recommended)
 
 ```php
+// Works best with PHP-FPM/FastCGI for true post-response execution
 function processOrder($orderData) {
     // Process the order
     $order = createOrder($orderData);
@@ -390,7 +420,8 @@ function processOrder($orderData) {
     });
     
     return ['success' => true, 'order_id' => $order->id];
-    // Response sent, then background tasks run in order: inventory, email, log
+    // In FastCGI: Response sent immediately, then background tasks run
+    // In other environments: Tasks run with fallback behavior
 }
 ```
 
@@ -438,9 +469,10 @@ No matter your platform or environment, defer callbacks will execute reliably.
 
 ## Limitations
 
-1. **Nested Exceptions**: Exceptions in defer callbacks are logged but don't propagate
-2. **Memory Limits**: Defer stacks have size limits to prevent memory leaks
-3. **Execution Order**: Function and Global defers use LIFO order, Terminate uses FIFO - plan accordingly
+1. **Terminate Defers**: Work optimally in FastCGI environments; other environments use fallback methods
+2. **Nested Exceptions**: Exceptions in defer callbacks are logged but don't propagate
+3. **Memory Limits**: Defer stacks have size limits to prevent memory leaks
+4. **Execution Order**: Function and Global defers use LIFO order, Terminate uses FIFO - plan accordingly
 
 ## License
 
