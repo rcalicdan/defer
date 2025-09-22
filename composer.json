@@ -1,8 +1,20 @@
 {
     "name": "rcalicdan/defer",
-    "description": "Framework agnostic Defered Execution Library for PHP",
+    "description": "Framework agnostic Deferred Execution Library for PHP",
     "type": "library",
     "license": "MIT",
+    "keywords": ["defer", "cleanup", "resource-management", "php", "lifecycle"],
+    "authors": [
+        {
+            "name": "Reymart Calicdan",
+            "email": "reymart.calicdan06@gmail.com"
+        }
+    ],
+    "homepage": "https://github.com/rcalicdan/defer",
+    "support": {
+        "issues": "https://github.com/rcalicdan/defer/issues",
+        "source": "https://github.com/rcalicdan/defer"
+    },
     "autoload": {
         "psr-4": {
             "Rcalicdan\\Defer\\": "src/"
@@ -13,22 +25,34 @@
             "Tests\\": "tests/"
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.2"
+    },
     "require-dev": {
-        "pestphp/pest": "4.x-dev",
-        "laravel/pint": "dev-main",
-        "phpstan/phpstan": "*",
-        "phpstan/phpstan-strict-rules": "*"
+        "pestphp/pest": "^3.0",
+        "laravel/pint": "^1.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-strict-rules": "^1.5"
     },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
-        }
+        },
+        "sort-packages": true,
+        "optimize-autoloader": true
     },
     "scripts": {
         "test": "./vendor/bin/pest",
+        "test-coverage": "./vendor/bin/pest --coverage --min=80",
         "format": "./vendor/bin/pint",
         "format-test": "./vendor/bin/pint --test",
-        "analyze": "./vendor/bin/phpstan analyse"
+        "analyze": "./vendor/bin/phpstan analyse",
+        "qa": [
+            "@format-test",
+            "@analyze",
+            "@test"
+        ]
     }
 }
