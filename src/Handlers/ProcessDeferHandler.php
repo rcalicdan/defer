@@ -63,12 +63,14 @@ class ProcessDeferHandler
             return;
         }
 
-        // Ensure an instance exists so the callback is valid
         if (self::$instance === null) {
-            new self(); // constructor sets self::$instance
+            new self();
         }
 
-        self::$signalHandler = new SignalRegistryHandler([self::$instance, 'executeAll']);
+        $instance = self::$instance;
+        assert($instance instanceof self);
+
+        self::$signalHandler = new SignalRegistryHandler([$instance, 'executeAll']);
         self::$signalHandler->register();
         self::$signalsRegistered = true;
     }
@@ -131,7 +133,7 @@ class ProcessDeferHandler
                     $stack[$i]();
                 }
             } catch (\Throwable $e) {
-                error_log('Defer error: '.$e->getMessage());
+                error_log('Defer error: ' . $e->getMessage());
             } finally {
                 unset($stack[$i]);
             }
@@ -163,7 +165,7 @@ class ProcessDeferHandler
             try {
                 $this->executeAll();
             } catch (\Throwable $e) {
-                error_log('Defer shutdown error: '.$e->getMessage());
+                error_log('Defer shutdown error: ' . $e->getMessage());
             }
         });
 
@@ -215,7 +217,7 @@ class ProcessDeferHandler
         $info = $this->getSignalHandlingInfo();
 
         echo "Platform: {$info['platform']} ({$info['sapi']})\n";
-        echo 'Signal handling: '.(self::$signalsEnabled ? 'enabled' : 'disabled (call Defer::enableSignals() to opt in)')."\n";
+        echo 'Signal handling: ' . (self::$signalsEnabled ? 'enabled' : 'disabled (call Defer::enableSignals() to opt in)') . "\n";
         echo "Available methods:\n";
 
         foreach ($info['methods'] as $method) {
@@ -225,7 +227,7 @@ class ProcessDeferHandler
         echo "\nCapabilities:\n";
         foreach ($info['capabilities'] as $capability => $available) {
             $isAvailable = is_bool($available) ? $available : (bool) $available;
-            echo '  '.($isAvailable ? '✅' : '❌')." {$capability}\n";
+            echo '  ' . ($isAvailable ? '✅' : '❌') . " {$capability}\n";
         }
 
         $this->defer(function () {
