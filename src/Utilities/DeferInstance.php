@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rcalicdan\Defer\Utilities;
 
 use Rcalicdan\Defer\Handlers\FunctionScopeHandler;
@@ -26,7 +28,8 @@ class DeferInstance
     /**
      * Add a function-scoped defer
      *
-     * @param  callable  $callback  The callback to defer
+     * @param callable $callback The callback to defer
+     *
      * @return self For method chaining
      */
     public function task(callable $callback): self

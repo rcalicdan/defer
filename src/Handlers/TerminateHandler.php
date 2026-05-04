@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rcalicdan\Defer\Handlers;
 
 class TerminateHandler
@@ -17,8 +19,8 @@ class TerminateHandler
     /**
      * Add a terminate callback
      *
-     * @param  callable  $callback  The callback to add
-     * @param  bool  $always  Whether to execute even on 4xx/5xx status codes
+     * @param callable $callback The callback to add
+     * @param bool $always Whether to execute even on 4xx/5xx status codes
      */
     public function addCallback(callable $callback, bool $always = false): void
     {
@@ -156,7 +158,7 @@ class TerminateHandler
                         $item['callback']();
                     }
                 } catch (\Throwable $e) {
-                    error_log('Terminate callback error: ' . $e->getMessage());
+                    error_log('Terminate callback error: '.$e->getMessage());
                 } finally {
                     unset($this->terminateStack[$index]);
                 }
@@ -203,7 +205,7 @@ class TerminateHandler
 
     /**
      * Get environment information
-     * 
+     *
      * @return array{sapi: string, fastcgi: bool, fastcgi_finish_request: bool, output_buffering: bool, current_response_code: int}
      */
     public function getEnvironmentInfo(): array

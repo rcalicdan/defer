@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use Rcalicdan\Defer\Handlers\FunctionScopeHandler;
 
 describe('FunctionScopeHandler', function () {
     it('executes defers in LIFO order', function () {
         $executed = [];
-        $handler = new FunctionScopeHandler;
+        $handler = new FunctionScopeHandler();
 
         $handler->defer(function () use (&$executed) {
             $executed[] = 'first';
@@ -25,7 +27,7 @@ describe('FunctionScopeHandler', function () {
     });
 
     it('counts defers correctly', function () {
-        $handler = new FunctionScopeHandler;
+        $handler = new FunctionScopeHandler();
 
         expect($handler->count())->toBe(0);
 
@@ -40,7 +42,7 @@ describe('FunctionScopeHandler', function () {
     });
 
     it('limits stack size to 50 items', function () {
-        $handler = new FunctionScopeHandler;
+        $handler = new FunctionScopeHandler();
 
         // Add 60 defers
         for ($i = 0; $i < 60; $i++) {
@@ -54,7 +56,7 @@ describe('FunctionScopeHandler', function () {
 
     it('handles exceptions in defers gracefully', function () {
         $executed = [];
-        $handler = new FunctionScopeHandler;
+        $handler = new FunctionScopeHandler();
 
         $handler->defer(function () use (&$executed) {
             $executed[] = 'first';
@@ -80,7 +82,7 @@ describe('FunctionScopeHandler', function () {
 
         // Create scope and let it go out of scope
         $createScope = function () use (&$executed) {
-            $handler = new FunctionScopeHandler;
+            $handler = new FunctionScopeHandler();
             $handler->defer(function () use (&$executed) {
                 $executed = true;
             });

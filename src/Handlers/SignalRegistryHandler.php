@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rcalicdan\Defer\Handlers;
 
 class SignalRegistryHandler
@@ -310,7 +312,8 @@ class SignalRegistryHandler
     /**
      * Parse memory limit string to bytes
      *
-     * @param  string  $limit  Memory limit string (e.g., '128M', '1G')
+     * @param string $limit Memory limit string (e.g., '128M', '1G')
+     *
      * @return int Memory limit in bytes
      */
     private function parseMemoryLimit(string $limit): int
@@ -399,12 +402,14 @@ class SignalRegistryHandler
     /**
      * Test if a specific capability is available
      *
-     * @param  string  $capability  Capability name to test
+     * @param string $capability Capability name to test
+     *
      * @return bool True if capability is available
      */
     public function hasCapability(string $capability): bool
     {
         $value = $this->capabilities[$capability] ?? false;
+
         return is_bool($value) ? $value : false;
     }
 }

@@ -1,14 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit;
 
+use Exception;
 use Rcalicdan\Defer\Handlers\TerminateHandler;
 use Tests\Helpers\TestableTerminateHandler;
-use Exception;
 
 describe('TerminateHandler', function () {
     it('adds callbacks correctly', function () {
-        $handler = new TerminateHandler;
+        $handler = new TerminateHandler();
 
         expect($handler->getCallbackCount())->toBe(0);
 
@@ -20,7 +22,7 @@ describe('TerminateHandler', function () {
     });
 
     it('limits callback stack to 50 items', function () {
-        $handler = new TerminateHandler;
+        $handler = new TerminateHandler();
 
         for ($i = 0; $i < 60; $i++) {
             $handler->addCallback(fn () => null);
@@ -30,7 +32,7 @@ describe('TerminateHandler', function () {
     });
 
     it('executes callbacks on success status', function () {
-        $handler = new TestableTerminateHandler;
+        $handler = new TestableTerminateHandler();
         $handler->setMockStatusCode(200);
 
         $executed = [];
@@ -49,7 +51,7 @@ describe('TerminateHandler', function () {
     });
 
     it('skips normal callbacks on error status but executes always callbacks', function () {
-        $handler = new TestableTerminateHandler;
+        $handler = new TestableTerminateHandler();
         $handler->setMockStatusCode(500);
 
         $executed = [];
@@ -68,7 +70,7 @@ describe('TerminateHandler', function () {
     });
 
     it('provides environment information', function () {
-        $handler = new TerminateHandler;
+        $handler = new TerminateHandler();
         $info = $handler->getEnvironmentInfo();
 
         expect($info)->toHaveKeys([
@@ -84,7 +86,7 @@ describe('TerminateHandler', function () {
     });
 
     it('handles exceptions in callbacks gracefully', function () {
-        $handler = new TestableTerminateHandler;
+        $handler = new TestableTerminateHandler();
         $executed = [];
 
         $handler->addCallback(function () use (&$executed) {

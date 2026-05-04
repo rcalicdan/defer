@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use Rcalicdan\Defer\Handlers\FunctionScopeHandler;
 use Rcalicdan\Defer\Utilities\DeferInstance;
 
 describe('DeferInstance', function () {
     it('supports method chaining', function () {
-        $instance = new DeferInstance;
+        $instance = new DeferInstance();
 
         $result = $instance->task(fn () => null)
             ->task(fn () => null)
@@ -18,7 +20,7 @@ describe('DeferInstance', function () {
 
     it('executes tasks in LIFO order', function () {
         $executed = [];
-        $instance = new DeferInstance;
+        $instance = new DeferInstance();
 
         $instance->task(function () use (&$executed) {
             $executed[] = 'first';
@@ -32,14 +34,14 @@ describe('DeferInstance', function () {
     });
 
     it('provides access to underlying handler', function () {
-        $instance = new DeferInstance;
+        $instance = new DeferInstance();
         $handler = $instance->getHandler();
 
         expect($handler)->toBeInstanceOf(FunctionScopeHandler::class);
     });
 
     it('counts tasks correctly', function () {
-        $instance = new DeferInstance;
+        $instance = new DeferInstance();
 
         expect($instance->count())->toBe(0);
 

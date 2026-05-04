@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Rcalicdan\Defer\Handlers\FunctionScopeHandler;
 use Rcalicdan\Defer\Handlers\ProcessDeferHandler;
 
@@ -12,7 +14,7 @@ describe('ProcessDeferHandler', function () {
 
     it('executes global defers in LIFO order', function () {
         $executed = [];
-        $handler = new ProcessDeferHandler;
+        $handler = new ProcessDeferHandler();
 
         $handler->defer(function () use (&$executed) {
             $executed[] = 'first';
@@ -28,7 +30,7 @@ describe('ProcessDeferHandler', function () {
     });
 
     it('limits global stack to 100 items', function () {
-        $handler = new ProcessDeferHandler;
+        $handler = new ProcessDeferHandler();
 
         // Add 120 defers
         for ($i = 0; $i < 120; $i++) {
@@ -53,7 +55,7 @@ describe('ProcessDeferHandler', function () {
 
     it('handles terminate callbacks', function () {
         $executed = false;
-        $handler = new ProcessDeferHandler;
+        $handler = new ProcessDeferHandler();
 
         $handler->terminate(function () use (&$executed) {
             $executed = true;
@@ -65,7 +67,7 @@ describe('ProcessDeferHandler', function () {
     });
 
     it('provides signal handling information', function () {
-        $handler = new ProcessDeferHandler;
+        $handler = new ProcessDeferHandler();
         $info = $handler->getSignalHandlingInfo();
 
         expect($info)->toHaveKeys(['platform', 'sapi', 'methods', 'capabilities']);
@@ -77,7 +79,7 @@ describe('ProcessDeferHandler', function () {
 
     it('handles exceptions during execution', function () {
         $executed = [];
-        $handler = new ProcessDeferHandler;
+        $handler = new ProcessDeferHandler();
 
         $handler->defer(function () use (&$executed) {
             $executed[] = 'first';
