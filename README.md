@@ -100,12 +100,11 @@ function processMultipleFiles(array $filenames) {
 
 ## Global Defers
 
-Global defers execute during script shutdown in **LIFO (Last In, First Out)** order, regardless of how the script terminates. They're perfect for application-level cleanup and work across all platforms and environments.
+Global defers execute during **normal script shutdown** in **LIFO (Last In, First Out)** order. They are guaranteed to run when the script exits naturally or encounters a fatal error.
 
 ```php
 use Rcalicdan\Defer\Defer;
 
-// Register cleanup that runs at script end
 Defer::global(function() {
     echo "First registered\n";
 });
@@ -127,25 +126,26 @@ Defer::global(function() {
 ### Practical Example
 
 ```php
-// Set up application cleanup (LIFO execution order)
 Defer::global(fn() => echo "1. Final cleanup completed\n");
 Defer::global(fn() => close_database_connections());
 Defer::global(fn() => cleanup_temp_files());
 Defer::global(fn() => echo "4. Starting cleanup sequence...\n");
 
-// Set up application
 $app = new Application();
 
-// This will execute even if the script exits unexpectedly
 Defer::global(fn() => $app->saveState());
 ```
 
-### Cross-Platform Signal Handling
+### Signal Handling (Opt-In)
 
-Global defers work reliably across all platforms and environments with automatic signal detection:
+By default, global defers only run on **normal script shutdown**. If you need defers to also run when the process is interrupted (e.g. `Ctrl+C`, `SIGTERM`, `SIGHUP`), you must explicitly opt in by calling `Defer::enableSignals()` early in your script.
+
+This is intentionally disabled by default — registering signal handlers can have unexpected side effects in web contexts, test runners, and scripts that manage their own signals.
 
 ```php
-// This cleanup runs on ALL platforms and termination scenarios
+// Opt in once, early in your entry point
+Defer::enableSignals();
+
 Defer::global(function() {
     file_put_contents('/tmp/shutdown.log', 'Clean shutdown: ' . date('Y-m-d H:i:s'));
 });
@@ -156,71 +156,43 @@ while (true) {
     sleep(1);
 }
 
-// Cleanup runs on:
-// - Windows: Ctrl+C, Ctrl+Break, window close
-// - Unix/Linux: SIGTERM, SIGINT, SIGHUP  
-// - All platforms: Normal script termination, fatal errors
+// Without enableSignals(): cleanup runs on normal exit only
+// With enableSignals(): cleanup also runs on Ctrl+C, SIGTERM, SIGHUP, etc.
 ```
+
+**Signal support by platform (when opted in):**
+
+- **Windows** — `sapi_windows_set_ctrl_handler()` (Ctrl+C, Ctrl+Break, window close)
+- **Unix/Linux with pcntl** — `SIGTERM`, `SIGINT`, `SIGHUP`
+- **Unix/Linux without pcntl** — process monitoring, STDIN monitoring, error handler fallbacks
+- **All platforms** — `register_shutdown_function()` as the guaranteed baseline
+
+> **Note:** Signal handling is only meaningful in CLI. Calling `Defer::enableSignals()` in a web context is a safe no-op.
 
 ## Terminate Defers
 
 Terminate defers execute after the HTTP response is sent to the client in **FIFO (First In, First Out)** order, allowing for background processing without impacting response time.
 
-**Note:** Terminate defers work best in **FastCGI environments** (PHP-FPM, FastCGI) where `fastcgi_finish_request()` is available. This function properly separates response sending from background task execution. Other environments use fallback methods but may not guarantee true post-response execution.
+**Note:** Terminate defers work best in **FastCGI environments** (PHP-FPM, FastCGI) where `fastcgi_finish_request()` is available. Other environments use fallback methods but may not guarantee true post-response execution.
 
 ### Basic Usage
 
 ```php
 use Rcalicdan\Defer\Defer;
 
-// In your controller/handler (works best with PHP-FPM/FastCGI)
 function handleRequest($request) {
-    // Process request and prepare response
     $response = processRequest($request);
     
-    // Register background tasks (FIFO execution)
+    // Background tasks execute in FIFO order after response is sent
     Defer::terminate(function() use ($request) {
         logAnalytics($request->getUri(), $request->getUserAgent());
     });
     
-    // Send email notification  
     Defer::terminate(function() use ($request) {
         sendWelcomeEmail($request->get('email'));
     });
     
-    Defer::terminate(fn() => echo "Final task\n");
-    
     return $response;
-    // Response sent to client, then terminate defers execute in FIFO order:
-    // 1. Log analytics
-    // 2. Send email
-    // 3. Echo message
-}
-```
-
-### Environment Requirements
-
-For optimal terminate defer functionality:
-
-**✅ Recommended (True post-response execution):**
-- PHP-FPM (FastCGI Process Manager)
-- FastCGI with `fastcgi_finish_request()` available
-
-**⚠️ Limited (Fallback behavior):**
-- CLI (executes after main script)
-- Development server (flushes output buffers first)
-- Other SAPIs (uses output buffer flushing)
-
-### Checking FastCGI Availability
-
-```php
-// Check if your environment supports optimal terminate functionality
-$info = Defer::getHandler()->getHandler()->getEnvironmentInfo();
-
-if ($info['fastcgi'] && $info['fastcgi_finish_request']) {
-    echo "✅ Optimal terminate defer support available\n";
-} else {
-    echo "⚠️ Using fallback terminate handling\n";
 }
 ```
 
@@ -240,29 +212,27 @@ Defer::terminate(function() {
 
 ### Environment Support
 
-Terminate defers work across different PHP environments with varying effectiveness:
-
-- **FastCGI/FPM** ✅: Uses `fastcgi_finish_request()` for true post-response execution
-- **CLI**: Executes after main script completion
-- **Development Server**: Flushes output buffers before execution
-- **Other SAPIs**: Fallback with output buffer handling
+- **FastCGI/FPM** ✅ — Uses `fastcgi_finish_request()` for true post-response execution
+- **CLI** — Executes after main script completion
+- **Development Server** — Flushes output buffers before execution
+- **Other SAPIs** — Fallback with output buffer handling
 
 ## Advanced Usage
 
 ### Manual Execution (Testing)
 
 ```php
-// Function-scoped - for unit testing (LIFO)
+// Function-scoped - manual execution in LIFO order
 $defer = Defer::scope();
 $defer->task(fn() => echo "Second\n");
 $defer->task(fn() => echo "First\n");
-$defer->executeAll(); // Manual execution in LIFO order
+$defer->executeAll();
 
-// Global - for testing (LIFO)
+// Global - manual execution in LIFO order
 Defer::global(fn() => echo "Global cleanup\n");
 Defer::getHandler()->executeAll();
 
-// Terminate - for testing (FIFO)
+// Terminate - manual execution in FIFO order
 Defer::terminate(fn() => echo "First task\n");
 Defer::terminate(fn() => echo "Second task\n");
 Defer::getHandler()->executeTerminate();
@@ -271,58 +241,38 @@ Defer::getHandler()->executeTerminate();
 ### Monitoring and Debugging
 
 ```php
-// Check defer counts
+// Check pending defer count
 $defer = Defer::scope();
 $defer->task(fn() => cleanup1());
 $defer->task(fn() => cleanup2());
-echo $defer->count(); // Output: 2
+echo $defer->count(); // 2
 
-// Signal handling capabilities
+// Check whether signal handling is active
+var_dump(Defer::signalsEnabled()); // bool(false) by default
+
+// Inspect signal handling capabilities
 $info = Defer::getHandler()->getSignalHandlingInfo();
 print_r($info);
-/*
-Array (
-    [platform] => Linux
-    [sapi] => cli
-    [methods] => Array (
-        [0] => Unix pcntl signals
-        [1] => Unix process monitoring (posix)
-        [2] => STDIN monitoring
-        [3] => Generic fallback (shutdown function)
-    )
-    [capabilities] => Array (
-        [pcntl_signals] => 1
-        [posix_monitoring] => 1
-        [stdin_monitoring] => 1
-        [shutdown_function] => 1
-    )
-)
-*/
 
-// Test signal handling
+// Run the built-in capability test (outputs platform/method details)
 Defer::getHandler()->testSignalHandling();
 ```
 
-### Environment Information
+### Checking FastCGI Availability
 
 ```php
-// For terminate defers - check FastCGI capabilities
 $info = Defer::getHandler()->getHandler()->getEnvironmentInfo();
-print_r($info);
-/*
-Array (
-    [sapi] => fpm-fcgi
-    [fastcgi] => 1                    // FastCGI environment detected
-    [fastcgi_finish_request] => 1     // Optimal function available
-    [output_buffering] => 0
-    [current_response_code] => 200
-)
-*/
+
+if ($info['fastcgi'] && $info['fastcgi_finish_request']) {
+    echo "✅ Optimal terminate defer support available\n";
+} else {
+    echo "⚠️ Using fallback terminate handling\n";
+}
 ```
 
 ## Error Handling
 
-All defer types include robust error handling:
+All defer types include robust error handling. Exceptions in callbacks are logged but do not prevent remaining callbacks from executing:
 
 ```php
 $defer = Defer::scope()
@@ -338,13 +288,12 @@ $defer = Defer::scope()
 
 ## Performance Considerations
 
-- **Function Scope**: Limited to 50 defers per instance (FIFO cleanup of oldest)
-- **Global Scope**: Limited to 100 defers total (FIFO cleanup of oldest)  
-- **Terminate Scope**: Limited to 50 defers (FIFO cleanup of oldest)
-- Function and Global defers execute in LIFO order (stack-like behavior)
-- Terminate defers execute in FIFO order (queue-like behavior)
+- **Function Scope**: Limited to 50 defers per instance (oldest dropped when exceeded)
+- **Global Scope**: Limited to 100 defers total (oldest dropped when exceeded)
+- **Terminate Scope**: Limited to 50 defers (oldest dropped when exceeded)
+- Function and Global defers execute in LIFO order
+- Terminate defers execute in FIFO order
 - Minimal overhead for registration and cleanup
-- **FastCGI environments provide the most efficient terminate defer execution**
 
 ## Real-World Examples
 
@@ -356,14 +305,12 @@ function transferFunds($fromAccount, $toAccount, $amount) {
     $pdo->beginTransaction();
     
     $defer = Defer::scope()
-        ->task(fn() => auditLog("Transaction attempt completed")) // Executes first (LIFO)
-        ->task(fn() => $pdo->rollback()); // Executes second - safety net
+        ->task(fn() => auditLog("Transaction attempt completed")) // Runs first (LIFO)
+        ->task(fn() => $pdo->rollback());                        // Runs second - safety net
     
-    // Debit from account
     $stmt = $pdo->prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?");
     $stmt->execute([$amount, $fromAccount]);
     
-    // Credit to account  
     $stmt = $pdo->prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?");
     $stmt->execute([$amount, $toAccount]);
     
@@ -380,10 +327,9 @@ function processUploadedImage($uploadedFile) {
     move_uploaded_file($uploadedFile['tmp_name'], $tempPath);
     
     $defer = Defer::scope()
-        ->task(fn() => echo "Processing completed\n") // Executes first (LIFO)
-        ->task(fn() => unlink($tempPath)); // Executes second - cleanup temp file
+        ->task(fn() => echo "Processing completed\n") // Runs first (LIFO)
+        ->task(fn() => unlink($tempPath));             // Runs second - cleanup
     
-    // Process image
     $image = imagecreatefromjpeg($tempPath);
     $resized = imagescale($image, 800, 600);
     
@@ -394,48 +340,45 @@ function processUploadedImage($uploadedFile) {
     imagedestroy($resized);
     
     return $finalPath;
-    // LIFO: message, then temp file cleanup
 }
 ```
 
-### Background Processing with Terminate (FastCGI Recommended)
+### Background Processing with Terminate
 
 ```php
-// Works best with PHP-FPM/FastCGI for true post-response execution
 function processOrder($orderData) {
-    // Process the order
     $order = createOrder($orderData);
     
-    // Background tasks execute in FIFO order after response
+    // Background tasks execute in FIFO order after response is sent
     Defer::terminate(function() use ($order) {
-        updateInventory($order); // Executes first
+        updateInventory($order);        // Runs first
     });
     
     Defer::terminate(function() use ($order) {
-        sendConfirmationEmail($order); // Executes second
+        sendConfirmationEmail($order);  // Runs second
     });
     
     Defer::terminate(function() use ($order) {
-        logOrderCompletion($order); // Executes third
+        logOrderCompletion($order);     // Runs third
     });
     
     return ['success' => true, 'order_id' => $order->id];
-    // In FastCGI: Response sent immediately, then background tasks run
-    // In other environments: Tasks run with fallback behavior
 }
 ```
 
-### Long-Running Process with Graceful Shutdown
+### Long-Running CLI Process with Graceful Shutdown
 
 ```php
-// Set up graceful shutdown (LIFO execution)
+// Opt in to signal handling for graceful interruption
+Defer::enableSignals();
+
+// Register cleanup in LIFO order
 Defer::global(fn() => echo "Shutdown complete\n");
 Defer::global(function() {
     file_put_contents('/var/log/worker.log', "Worker stopped: " . date('c') . "\n", FILE_APPEND);
 });
 Defer::global(fn() => echo "Starting shutdown sequence...\n");
 
-// Worker process
 while (true) {
     $job = getNextJob();
     if (!$job) {
@@ -445,34 +388,25 @@ while (true) {
     
     processJob($job);
 }
-// LIFO cleanup runs on any termination across all platforms
+
+// LIFO cleanup runs on normal exit AND on Ctrl+C / SIGTERM (because enableSignals() was called)
 ```
 
 ## Execution Order Summary
 
-- **Function Scope**: LIFO (Last In, First Out) - like a stack
-- **Global Scope**: LIFO (Last In, First Out) - like a stack  
-- **Terminate Scope**: FIFO (First In, First Out) - like a queue
-
-This design ensures proper resource cleanup for function and global scopes while maintaining logical execution order for background tasks.
-
-## Platform Compatibility
-
-The library is truly **platform-agnostic** and provides robust signal handling across all environments:
-
-- **Windows**: Native signal handling with `sapi_windows_set_ctrl_handler()`
-- **Unix/Linux**: PCNTL signals, process monitoring, STDIN monitoring
-- **All Platforms**: Fallback mechanisms ensure cleanup always works
-- **Web/CLI**: Automatic environment detection and appropriate handler selection
-
-No matter your platform or environment, defer callbacks will execute reliably.
+| Scope | Order | Triggered by |
+|---|---|---|
+| Function | LIFO | Instance going out of scope |
+| Global | LIFO | Script shutdown (+ signals if opted in) |
+| Terminate | FIFO | After HTTP response is sent |
 
 ## Limitations
 
-1. **Terminate Defers**: Work optimally in FastCGI environments; other environments use fallback methods
-2. **Nested Exceptions**: Exceptions in defer callbacks are logged but don't propagate
-3. **Memory Limits**: Defer stacks have size limits to prevent memory leaks
-4. **Execution Order**: Function and Global defers use LIFO order, Terminate uses FIFO - plan accordingly
+1. **Signal handling** is opt-in via `Defer::enableSignals()` — global defers only cover normal shutdown by default
+2. **Terminate defers** work optimally in FastCGI environments; other environments use fallback methods
+3. **Exceptions** in defer callbacks are logged but do not propagate
+4. **Defer stacks** have size limits to prevent memory leaks (see Performance Considerations)
+5. **Execution order** differs by scope — plan your cleanup registration accordingly
 
 ## License
 
