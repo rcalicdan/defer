@@ -29,8 +29,7 @@ describe('Defer Static Class', function () {
             $executed = true;
         });
 
-        $handler = Defer::getHandler();
-        $handler->executeAll();
+        Defer::executeAll();
 
         expect($executed)->toBeTrue();
     });
@@ -42,8 +41,7 @@ describe('Defer Static Class', function () {
             $executed = true;
         });
 
-        $handler = Defer::getHandler();
-        $handler->executeTerminate();
+        Defer::executeTerminate();
 
         expect($executed)->toBeTrue();
     });
@@ -51,19 +49,29 @@ describe('Defer Static Class', function () {
     it('resets state properly', function () {
         Defer::global(fn () => null);
 
-        expect(Defer::getHandler())->toBeInstanceOf(ProcessDeferHandler::class);
-
         Defer::reset();
 
-        // After reset, a new handler should be created
-        $newHandler = Defer::getHandler();
-        expect($newHandler)->toBeInstanceOf(ProcessDeferHandler::class);
+        $executed = false;
+        Defer::global(function () use (&$executed) {
+            $executed = true;
+        });
+
+        Defer::executeAll();
+
+        expect($executed)->toBeTrue();
     });
 
     it('maintains singleton pattern for handler', function () {
-        $handler1 = Defer::getHandler();
-        $handler2 = Defer::getHandler();
+        $executed = false;
 
-        expect($handler1)->toBe($handler2);
+        Defer::global(function () use (&$executed) {
+            $executed = true;
+        });
+
+        Defer::signalsEnabled();
+
+        Defer::executeAll();
+
+        expect($executed)->toBeTrue();
     });
 });

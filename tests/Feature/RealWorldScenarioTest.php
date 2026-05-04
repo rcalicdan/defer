@@ -68,34 +68,30 @@ describe('Real World Scenarios', function () {
         expect($files)->toHaveCount(0);
     });
 
+
     it('handles API request lifecycle', function () {
         $metrics = [];
         $startTime = microtime(true);
 
-        // Global defer for request metrics
         Defer::global(function () use (&$metrics, $startTime) {
             $metrics['total_time'] = microtime(true) - $startTime;
             $metrics['status'] = 'completed';
         });
 
-        // Terminate defer for cleanup after response
         Defer::terminate(function () use (&$metrics) {
             $metrics['cleanup_done'] = true;
         });
 
-        // Function scope for request-specific cleanup
         $scope = Defer::scope();
         $scope->task(function () use (&$metrics) {
             $metrics['request_cleanup'] = true;
         });
 
-        // Simulate request processing
-        usleep(1000); // 1ms
+        usleep(1000);
 
-        // Execute cleanup in order
         $scope->executeAll();
-        Defer::getHandler()->executeTerminate();
-        Defer::getHandler()->executeAll();
+        Defer::executeTerminate();
+        Defer::executeAll();
 
         expect($metrics)->toHaveKey('request_cleanup');
         expect($metrics)->toHaveKey('cleanup_done');

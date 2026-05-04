@@ -28,10 +28,9 @@ describe('Error Handling', function () {
             $executed[] = 'third';
         });
 
-        // Should execute all, logging the error for the middle one
-        Defer::getHandler()->executeAll();
+        Defer::executeAll();
 
-        expect($executed)->toBe(['third', 'first']); // LIFO order
+        expect($executed)->toBe(['third', 'first']);
     });
 
     it('handles execution with mixed valid and throwing callbacks', function () {
@@ -80,19 +79,16 @@ describe('Error Handling', function () {
     });
 
     it('handles stack overflow protection', function () {
-        $handler = Defer::getHandler();
         $executionCount = 0;
 
-        // Add more than the limit (100)
         for ($i = 0; $i < 150; $i++) {
-            $handler->defer(function () use (&$executionCount) {
+            Defer::global(function () use (&$executionCount) {
                 $executionCount++;
             });
         }
 
-        $handler->executeAll();
+        Defer::executeAll();
 
-        // Should only execute the last 100
         expect($executionCount)->toBe(100);
     });
 

@@ -13,29 +13,26 @@ afterEach(function () {
 });
 
 describe('Defer Integration', function () {
+
     it('handles mixed scope defers correctly', function () {
         $executed = [];
 
-        // Global defer
         Defer::global(function () use (&$executed) {
             $executed[] = 'global';
         });
 
-        // Function scope
         $scope = Defer::scope();
         $scope->task(function () use (&$executed) {
             $executed[] = 'function';
         });
 
-        // Terminate defer
         Defer::terminate(function () use (&$executed) {
             $executed[] = 'terminate';
         });
 
-        // Execute in proper order
-        $scope->executeAll(); // Function scope first
-        Defer::getHandler()->executeTerminate(); // Terminate second
-        Defer::getHandler()->executeAll(); // Global last
+        $scope->executeAll();
+        Defer::executeTerminate();
+        Defer::executeAll();
 
         expect($executed)->toBe(['function', 'terminate', 'global']);
     });
