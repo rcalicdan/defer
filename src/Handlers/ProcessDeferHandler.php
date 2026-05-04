@@ -210,6 +210,14 @@ class ProcessDeferHandler
         ];
     }
 
+    /**
+     * @return array{sapi: string, fastcgi: bool, fastcgi_finish_request: bool, output_buffering: bool, current_response_code: int}
+     */
+    public function getEnvironmentInfo(): array
+    {
+        return $this->terminateHandler->getEnvironmentInfo();
+    }
+
     public function testSignalHandling(): void
     {
         echo "Testing defer signal handling capabilities...\n";

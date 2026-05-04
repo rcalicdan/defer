@@ -16,7 +16,7 @@ class Defer
      */
     public static function scope(): DeferInstance
     {
-        return new DeferInstance;
+        return new DeferInstance();
     }
 
     /**
@@ -114,7 +114,7 @@ class Defer
     private static function handler(): ProcessDeferHandler
     {
         if (self::$globalHandler === null) {
-            self::$globalHandler = new ProcessDeferHandler;
+            self::$globalHandler = new ProcessDeferHandler();
         }
 
         return self::$globalHandler;
