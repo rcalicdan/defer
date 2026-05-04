@@ -16,7 +16,7 @@ class Defer
      */
     public static function scope(): DeferInstance
     {
-        return new DeferInstance();
+        return new DeferInstance;
     }
 
     /**
@@ -24,7 +24,7 @@ class Defer
      */
     public static function global(callable $callback): void
     {
-        self::getHandler()->defer($callback);
+        self::handler()->defer($callback);
     }
 
     /**
@@ -34,21 +34,15 @@ class Defer
      */
     public static function terminate(callable $callback, bool $always = false): void
     {
-        self::getHandler()->terminate($callback, $always);
+        self::handler()->terminate($callback, $always);
     }
 
     /**
-     * Opt-in: register OS signal handlers (SIGTERM, SIGINT, SIGHUP, Ctrl-C, etc.)
-     * so that deferred callbacks run even when the process is interrupted.
+     * Opt-in: register OS signal handlers so that global defers also run
+     * on SIGTERM, SIGINT, SIGHUP, Ctrl-C, etc.
      *
-     * Disabled by default to avoid unexpected behaviour. Call this once, early
-     * in your script, when you need graceful shutdown on interruption.
-     *
-     * Only meaningful in CLI; silently no-ops in other SAPIs.
-     *
-     * Example:
-     *   Defer::enableSignals();
-     *   Defer::global(fn() => $db->close());
+     * Disabled by default. Call once, early in your CLI entry point.
+     * No-op in non-CLI environments.
      */
     public static function enableSignals(): void
     {
@@ -64,7 +58,52 @@ class Defer
     }
 
     /**
-     * Reset all state (useful for testing).
+     * Return signal handling capabilities for the current platform.
+     *
+     * @return array{platform: string, sapi: string, methods: array<string>, capabilities: array<string, mixed>}
+     */
+    public static function signalInfo(): array
+    {
+        return self::handler()->getSignalHandlingInfo();
+    }
+
+    /**
+     * Print a diagnostic summary of signal handling capabilities.
+     */
+    public static function testSignals(): void
+    {
+        self::handler()->testSignalHandling();
+    }
+
+    /**
+     * Return environment info relevant to terminate defer behaviour
+     * (SAPI, FastCGI availability, output buffering, current response code).
+     *
+     * @return array{sapi: string, fastcgi: bool, fastcgi_finish_request: bool, output_buffering: bool, current_response_code: int}
+     */
+    public static function environmentInfo(): array
+    {
+        return self::handler()->getEnvironmentInfo();
+    }
+
+    /**
+     * Manually flush all pending global defers (useful in tests).
+     */
+    public static function executeAll(): void
+    {
+        self::handler()->executeAll();
+    }
+
+    /**
+     * Manually flush all pending terminate callbacks (useful in tests).
+     */
+    public static function executeTerminate(): void
+    {
+        self::handler()->executeTerminate();
+    }
+
+    /**
+     * Reset all static state (useful between tests).
      */
     public static function reset(): void
     {
@@ -72,10 +111,10 @@ class Defer
         ProcessDeferHandler::reset();
     }
 
-    public static function getHandler(): ProcessDeferHandler
+    private static function handler(): ProcessDeferHandler
     {
         if (self::$globalHandler === null) {
-            self::$globalHandler = new ProcessDeferHandler();
+            self::$globalHandler = new ProcessDeferHandler;
         }
 
         return self::$globalHandler;
